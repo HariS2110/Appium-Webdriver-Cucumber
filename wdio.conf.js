@@ -1,5 +1,8 @@
 import path from 'path';
 
+// Decide environment
+const isBrowserStack = process.env.RUN_ENV === 'browserstack';
+
 export const config = {
     //
     // ====================
@@ -52,13 +55,21 @@ export const config = {
     // Sauce Labs platform configurator - a great tool to configure your capabilities:
     // https://saucelabs.com/platform/platform-configurator
     //
-    capabilities: [{
-    platformName: 'Android',
-    'appium:deviceName':  'Android Emulator',
-    'appium:platformVersion': '15.0',
-    'appium:automationName': 'UiAutomator2',
-    'appium:app': path.join(process.cwd(), 'app/Demo app.apk'),
-}],
+    capabilities: isBrowserStack
+        ? [{
+            platformName: 'Android',
+            'appium:deviceName': 'Samsung Galaxy S25 Ultra',
+            'appium:platformVersion': '15.0',
+            'appium:automationName': 'UiAutomator2',
+            'appium:app': 'bs://b217446d8e0dceeeba408d35cdfe52d97a9bb2b9'
+        }]
+        : [{
+            platformName: 'Android',
+            'appium:deviceName': 'emulator-5554',
+            'appium:platformVersion': '15.0',
+            'appium:automationName': 'UiAutomator2',
+            'appium:app': path.join(process.cwd(), 'app/Demo app.apk')
+        }],
     //
     // ===================
     // Test Configurations
@@ -106,7 +117,9 @@ export const config = {
     // Services take over a specific job you don't want to take care of. They enhance
     // your test setup with almost no effort. Unlike plugins, they don't add new
     // commands. Instead, they hook themselves up into the test process.
-    services: ['appium'],
+    services: isBrowserStack ? ['browserstack'] : ['appium'],
+    user: isBrowserStack ? process.env.BROWSERSTACK_USER : 'dave_uzKLwi',
+    key: isBrowserStack ? process.env.BROWSERSTACK_KEY : 'L8jbZ6wLPrs27GLGNuHX',
 
     // Framework you want to run your specs with.
     // The following are supported: Mocha, Jasmine, and Cucumber

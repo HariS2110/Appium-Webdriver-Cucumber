@@ -1,79 +1,23 @@
-name: CI/CD - Android Appium WDIO
-
-on:
-  workflow_dispatch:
-    inputs:
-      node-version:
-        description: "Choose the Node.js version for the workflow"
-        required: false
-        default: "20"
-        type: choice
-        options:
-          - "16"
-          - "18"
-          - "20"
-          - "21"
-      generate-report:
-        description: "Choose whether to create and upload the test report"
-        required: false
-        default: "no"
-        type: choice
-        options:
-          - "yes"
-          - "no"
-
+name: CI
+on: [push, pull_request]
 jobs:
-  android-tests:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ github.event.inputs.node-version }}
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Install PulseAudio
-        run: sudo apt-get install pulseaudio
-
-      - name: Enable KVM (for Android Emulator)
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      # FIX: Pre-create AVD directory to avoid "Directory nonexistent" error
-      - name: Pre-create AVD directory
-        run: mkdir -p $HOME/.android/avd/test.avd
-
-      - name: Run Android Emulator
-        uses: ReactiveCircus/android-emulator-runner@v2.34.0 # upgraded for bug fixes
-        with:
-          api-level: 31
-          target: google_apis
-          arch: x86_64
-          profile: Nexus 6
-          avd-name: test
-          emulator-options: -no-snapshot -no-audio -gpu swiftshader_indirect
-          script: |
-            echo "Installing APK..."
-            adb install "app/Demo app.apk"
-            adb wait-for-device
-            adb shell input keyevent 82
-            echo "Running WebDriverIO + Cucumber Tests"
-            npx wdio run ./wdio.conf.js
-
-      - name: Generate Mochawesome report
-        if: ${{ github.event.inputs.generate-report == 'yes' }}
-        run: npm run report
-
-      - name: Upload test report
-        if: ${{ github.event.inputs.generate-report == 'yes' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-report
-          path: ./reports
+        - name: Checkout
+          uses: actions/checkout@v2
+        - uses: actions/setup-node@v1
+          with:
+            node-version: 16.3.0
+        - name: Install
+          run: npm install
+        - name: Test
+          env:
+            BROWSERSTACK_USER: ${{ secrets.BS_USER }}
+            BROWSERSTACK_KEY: ${{ secrets.BS_KEY }}
+          run: npx wdio run wdio.conf.js
+        - uses: actions/upload-artifact@v1
+          if: failure()
+          with:
+            name: logs
+            path: logs
