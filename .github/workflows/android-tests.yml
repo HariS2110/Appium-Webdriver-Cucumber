@@ -14,6 +14,8 @@ jobs:
       PATH: $ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
 
     steps:
+    - name: Install tar
+      run: sudo apt-get update && sudo apt-get install -y tar
     - name: Checkout repo
       uses: actions/checkout@v3
 
