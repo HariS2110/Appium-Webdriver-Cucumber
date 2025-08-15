@@ -1,4 +1,4 @@
-name: Android Emulator CI
+name: Android App Automation CI
 
 on:
   push:
@@ -7,46 +7,39 @@ on:
     branches: [ main ]
 
 jobs:
-  android-emulator:
-    runs-on: ubuntu-latest
-    env:
-      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+  build:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        api-level: [35]
+        target: [default]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Set up JDK 11
+      - name: Set up JDK 1.8
         uses: actions/setup-java@v3
         with:
           distribution: temurin
-          java-version: 11
+          java-version: 1.8
 
-      - name: Download Android SDK command line tools
-        run: |
-          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
-          cd $ANDROID_SDK_ROOT/cmdline-tools
-          curl -o sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip sdk-tools.zip
-          rm sdk-tools.zip
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '12'
 
-      - name: Install Android SDK packages
+      - name: Install Appium
         run: |
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools/bin/sdkmanager --licenses
-          $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools/bin/sdkmanager "platform-tools" "platforms;android-33" "system-images;android-33;google_apis;x86_64" "emulator"
+          npm install -g appium@1.28.2
+          appium -v
+          appium &>/dev/null &
 
-      - name: Create and start emulator
-        run: |
-          echo "no" | $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools/bin/avdmanager create avd -n test -k "system-images;android-33;google_apis;x86_64" --device "pixel"
-          $ANDROID_SDK_ROOT/emulator/emulator -avd test -no-window -no-audio -no-snapshot -gpu swiftshader_indirect &
+      - name: Run Android Emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
+          arch: x86_64
+          profile: Nexus 6
+          script: npx wdio run wdio.conf.js
 
-      - name: Wait for emulator
-        run: |
-          adb wait-for-device
-          boot_completed=""
-          while [[ "$boot_completed" != "1" ]]; do
-            sleep 5
-            boot_completed=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
-            echo "Boot completed: $boot_completed"
-          done
-          adb shell input keyevent 82
