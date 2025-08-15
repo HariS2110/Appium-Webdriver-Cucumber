@@ -1,50 +1,59 @@
-name: Android Emulator CI
+name: Android Emulator Tests
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
 
 jobs:
-  android-emulator:
+  android-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+
+    env:
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Set up JDK
-      - name: Set up JDK
+      # Install Java
+      - name: Set up JDK 11
         uses: actions/setup-java@v3
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: temurin
+          java-version: 11
 
-      # Set up Android SDK
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v2
+      # Install Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
-          api-level: 33
-          target: default
-          arch: x86_64
-          emulator-options: -no-window -gpu swiftshader_indirect
+          node-version: 20
 
-      # Kill any existing adb server
-      - name: Restart ADB server
+      # Install Android SDK
+      - name: Install Android SDK
         run: |
-          adb kill-server || true
-          adb start-server
+          sudo mkdir -p $ANDROID_SDK_ROOT
+          sudo chown -R $USER:$USER $ANDROID_SDK_ROOT
+          curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+          unzip commandlinetools.zip -d $ANDROID_SDK_ROOT/cmdline-tools
+          mv $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-33" "system-images;android-33;google_apis;x86_64" "emulator"
 
-      # Start emulator
-      - name: Start emulator
+      # Create Android Emulator
+      - name: Create AVD
         run: |
-          echo "Starting emulator..."
-          $ANDROID_HOME/emulator/emulator -avd test -no-snapshot-load -no-window -gpu swiftshader_indirect &
+          echo "y" | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/avdmanager create avd \
+            -n test \
+            -k "system-images;android-33;google_apis;x86_64" \
+            --force
+
+      # Start Android Emulator
+      - name: Start Emulator
+        run: |
+          $ANDROID_SDK_ROOT/emulator/emulator -avd test -no-window -gpu swiftshader_indirect &
           adb wait-for-device
 
-          # Wait until boot completed
           boot_completed=""
           until [[ "$boot_completed" == "1" ]]; do
             boot_completed=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
@@ -53,7 +62,10 @@ jobs:
           done
           echo "Emulator is ready!"
 
-      # Run your tests
+      # Install dependencies
+      - name: Install NPM dependencies
+        run: npm install
+
+      # Run WebDriverIO + Appium tests
       - name: Run tests
-        run: |
-          echo "Run your Appium/WebDriverIO tests here"
+        run: npx wdio run wdio.conf.js
