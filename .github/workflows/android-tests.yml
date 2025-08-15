@@ -21,16 +21,16 @@ jobs:
         uses: actions/setup-java@v3
         with:
           distribution: temurin
-          java-version: 1.8
+          java-version: 17
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '12'
+          node-version: '18'
 
       - name: Install Appium
         run: |
-          npm install -g appium@1.28.2
+          npm install -g appium@2.19.0
           appium -v
           appium &>/dev/null &
 
