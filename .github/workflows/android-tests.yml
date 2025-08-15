@@ -8,14 +8,12 @@ on:
 
 jobs:
   android-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       ANDROID_HOME: /usr/local/android-sdk
-      PATH: $ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+      PATH: ${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:$PATH
 
     steps:
-    - name: Install tar
-      run: sudo apt-get update && sudo apt-get install -y tar
     - name: Checkout repo
       uses: actions/checkout@v3
 
@@ -29,8 +27,6 @@ jobs:
 
     - name: Install Android SDK packages
       run: |
-        sudo apt-get update
-        sudo apt-get install -y unzip wget lib32stdc++6 lib32z1
         mkdir -p $ANDROID_HOME/cmdline-tools
         cd $ANDROID_HOME/cmdline-tools
         wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O tools.zip
