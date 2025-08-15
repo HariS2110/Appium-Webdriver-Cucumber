@@ -16,8 +16,12 @@ jobs:
                 appium -v
                 appium &>/dev/null &
             
-            - name: run tests
+            - name: Run Android emulator and tests
               uses: reactivecircus/android-emulator-runner@v2
               with:
-                api-level:  29
-                script: npx wdio run wdio.conf.js
+                api-level: 29
+                script: |
+                  # get the first emulator device name
+                  export ANDROID_DEVICE_NAME=$(adb devices | grep emulator | cut -f1)
+                  echo "Using emulator: $ANDROID_DEVICE_NAME"
+                        npx wdio run wdio.conf.js
