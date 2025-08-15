@@ -53,7 +53,7 @@ jobs:
           profile: Nexus 6
           script: |
             echo "Installing App"
-            adb install "apps/android/android.wdio.native.app.v1.0.8.apk"
+            adb install "app/Demo app.apk"
             adb shell dumpsys package com.wdiodemoapp | grep -A 1 "MAIN"
             adb wait-for-device
             adb shell input keyevent 82
