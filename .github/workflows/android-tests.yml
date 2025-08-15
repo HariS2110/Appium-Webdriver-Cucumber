@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-    timeout-minutes: 30  # Emulator may need extra time
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v3
@@ -35,14 +35,15 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 33
+          target: google_apis  # Use Google APIs instead of default
           arch: arm64-v8a
           profile: Nexus 6
           script: |
-            echo "Waiting for emulator to boot..."
+            echo "Waiting for emulator..."
             $ANDROID_HOME/platform-tools/adb wait-for-device
             echo "Emulator devices:"
             $ANDROID_HOME/platform-tools/adb devices -l
             echo "Starting tests..."
             npx wdio run wdio.conf.js
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          emulator-options: -no-window -gpu off -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
