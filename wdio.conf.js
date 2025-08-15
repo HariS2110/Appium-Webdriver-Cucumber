@@ -54,11 +54,12 @@ export const config = {
     //
     capabilities: [{
     platformName: 'Android',
-    'appium:deviceName':  process.env.CI ? 'emulator' : 'emulator-5554', // Dynamic name,
-    'appium:platformVersion': '15.0',
+    'appium:deviceName': process.env.CI ? 'test' : 'emulator-5554', // GitHub runner uses 'test'
+    'appium:platformVersion': '11.0',  // Match the API level you set in GitHub Actions
     'appium:automationName': 'UiAutomator2',
     'appium:app': path.join(process.cwd(), 'app/Demo app.apk'),
 }],
+
     //
     // ===================
     // Test Configurations

@@ -32,7 +32,7 @@ jobs:
         with:
           api-level: 30                     # ✅ Faster boot time than 33
           target: google_apis               # Can use 'default' for even faster boots
-          arch: x86_64
+          arch: arm64-v8a
           profile: pixel_4
           script: |
             adb devices
