@@ -53,13 +53,12 @@ export const config = {
     // https://saucelabs.com/platform/platform-configurator
     //
     capabilities: [{
-        // capabilities for local Appium web tests on an Android Emulator
-        platformName: 'Android',
-        'appium:deviceName': 'Android Emulator',
-        'appium:platformVersion': '15.0',
-        'appium:automationName': 'UiAutomator2',
-        'appium:app': path.join(process.cwd(), 'app/Demo app.apk'),
-    }],
+    platformName: 'Android',
+    'appium:deviceName': 'Android Emulator', // generic
+    'appium:platformVersion': process.env.ANDROID_API_LEVEL || '15.0', // fallback to local version
+    'appium:automationName': 'UiAutomator2',
+    'appium:app': path.join(process.cwd(), 'app/Demo app.apk'),
+}],
 
     //
     // ===================
