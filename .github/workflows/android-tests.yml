@@ -29,12 +29,11 @@ jobs:
         with:
           node-version: '20'
 
-      # Install Android SDK tools via Homebrew
-      - name: Install Android SDK
+      # Set Android SDK environment variables (preinstalled on macOS runners)
+      - name: Set Android SDK paths
         run: |
-          brew install --cask android-sdk
-          echo "ANDROID_HOME=/usr/local/share/android-sdk" >> $GITHUB_ENV
-          echo "PATH=$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH" >> $GITHUB_ENV
+          echo "ANDROID_HOME=$HOME/Library/Android/sdk" >> $GITHUB_ENV
+          echo "PATH=$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH" >> $GITHUB_ENV
 
       # Install Android 15 emulator + system image
       - name: Install Android Emulator & System Image
@@ -43,11 +42,17 @@ jobs:
           yes | sdkmanager "platform-tools" "platforms;android-35" "system-images;android-35;google_apis;x86_64" "emulator"
           echo "no" | avdmanager create avd -n emulator-5554 -k "system-images;android-35;google_apis;x86_64" --device "pixel"
 
-      # Start emulator
+      # Start emulator and wait until boot complete
       - name: Start Emulator
         run: |
           $ANDROID_HOME/emulator/emulator -avd emulator-5554 -no-audio -no-window -gpu swiftshader_indirect &
           adb wait-for-device
+          # Wait for system boot to finish
+          boot_completed=""
+          until [ "$boot_completed" = "1" ]; do
+            sleep 5
+            boot_completed=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+          done
           adb shell input keyevent 82
 
       # Install Node dependencies
