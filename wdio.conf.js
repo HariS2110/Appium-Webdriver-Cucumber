@@ -55,7 +55,7 @@ export const config = {
     capabilities: [{
     platformName: 'Android',
     'appium:deviceName': 'Android Emulator', // generic
-    'appium:platformVersion': process.env.ANDROID_API_LEVEL || '15.0', // fallback to local version
+    'appium:platformVersion': '10.0',
     'appium:automationName': 'UiAutomator2',
     'appium:app': path.join(process.cwd(), 'app/Demo app.apk'),
 }],
