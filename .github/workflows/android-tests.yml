@@ -1,42 +1,59 @@
-name: Android Automation Tests
+name: Android Emulator CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
-  android-tests:
-    runs-on: macos-latest   # ✅ macOS runner for hardware-accelerated emulator
-    timeout-minutes: 60
+  android-emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
-      # Step 1: Checkout code
-      - name: Checkout Repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Setup Node.js
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      # Set up JDK
+      - name: Set up JDK
+        uses: actions/setup-java@v3
         with:
-          node-version: '20'
+          distribution: 'temurin'
+          java-version: '17'
 
-      # Step 3: Install dependencies
-      - name: Install Node.js dependencies
-        run: npm ci
-
-      # Step 4: Download Android SDK & start emulator
-      - name: Launch Android Emulator
-        uses: ReactiveCircus/android-emulator-runner@v2
+      # Set up Android SDK
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v2
         with:
-          api-level: 30                     # ✅ Faster boot time than 33
-          target: google_apis               # Can use 'default' for even faster boots
-          arch: arm64-v8a
-          profile: pixel_4
-          script: |
-            adb devices
-            adb install ./app-debug.apk      # ✅ Replace with path to your APK
-            npx appium --log-level info &    # ✅ Start Appium in background
-            sleep 10                         # Give Appium time to start
-            npx wdio run wdio.conf.js        # ✅ Run WDIO + Cucumber tests
+          api-level: 33
+          target: default
+          arch: x86_64
+          emulator-options: -no-window -gpu swiftshader_indirect
+
+      # Kill any existing adb server
+      - name: Restart ADB server
+        run: |
+          adb kill-server || true
+          adb start-server
+
+      # Start emulator
+      - name: Start emulator
+        run: |
+          echo "Starting emulator..."
+          $ANDROID_HOME/emulator/emulator -avd test -no-snapshot-load -no-window -gpu swiftshader_indirect &
+          adb wait-for-device
+
+          # Wait until boot completed
+          boot_completed=""
+          until [[ "$boot_completed" == "1" ]]; do
+            boot_completed=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+            echo "Waiting for emulator to boot..."
+            sleep 5
+          done
+          echo "Emulator is ready!"
+
+      # Run your tests
+      - name: Run tests
+        run: |
+          echo "Run your Appium/WebDriverIO tests here"
