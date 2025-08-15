@@ -59,7 +59,6 @@ export const config = {
     'appium:automationName': 'UiAutomator2',
     'appium:app': path.join(process.cwd(), 'app/Demo app.apk'),
 }],
-
     //
     // ===================
     // Test Configurations
