@@ -1,60 +1,23 @@
 name: Android WDIO Tests
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
+on: push
 
 jobs:
-  android-tests:
-    runs-on: ubuntu-22.04
-    env:
-      ANDROID_HOME: /usr/local/android-sdk
-      PATH: $ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+    run-mobile-tests:
+        runs-on: macos-latest
 
-    steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
+        steps:
+            - name: pull the project in to the runner
+              uses: actions/checkout@v3
 
-    - name: Install basic dependencies
-      run: sudo apt-get update && sudo apt-get install -y tar unzip wget
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '20'
-
-    - name: Install dependencies
-      run: npm install
-
-    - name: Install Android SDK packages
-      run: |
-        mkdir -p $ANDROID_HOME/cmdline-tools
-        cd $ANDROID_HOME/cmdline-tools
-        wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O tools.zip
-        unzip tools.zip
-        mv cmdline-tools latest
-        rm tools.zip
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "system-images;android-33;google_apis;x86_64" "emulator"
-
-    - name: Create Android emulator
-      run: |
-        echo "no" | $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager create avd -n test_emulator -k "system-images;android-33;google_apis;x86_64" --force
-
-    - name: Start emulator
-      run: |
-        $ANDROID_HOME/emulator/emulator -avd test_emulator -no-snapshot -no-audio -no-window &
-        $ANDROID_HOME/platform-tools/adb wait-for-device
-        $ANDROID_HOME/platform-tools/adb shell input keyevent 82
-        $ANDROID_HOME/platform-tools/adb devices
-
-    - name: Start Appium server
-      run: npx appium &
-
-    - name: Wait for Appium
-      run: sleep 10
-
-    - name: Run WDIO tests
-      run: npx wdio run wdio.conf.js
+            - name: setup appium
+              run: |
+                npm install -g appium@2.19.0
+                appium -v
+                appium &>/dev/null &
+            
+            - name: run tests
+              uses: reactivecircus/android-emulator-runner@v2
+              with:
+                api-level: 35
+                script: npx wdio run wdio.conf.js
