@@ -25,5 +25,9 @@ jobs:
             - name: run tests
               uses: reactivecircus/android-emulator-runner@v2
               with:
-                api-level: 33
+                api-level: 30  # Most stable API level
+                target: google_apis  # Use Google APIs image
+                arch: x86_64  # Required for newer API levels
                 script: npx wdio run wdio.conf.js
+                emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+                disable-animations: true
