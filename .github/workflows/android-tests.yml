@@ -35,7 +35,6 @@ jobs:
           node-version: ${{ github.event.inputs.node-version }}
 
       - name: Install dependencies
-<<<<<<< HEAD
         run: npm install
 
       - name: Enable KVM
@@ -46,16 +45,6 @@ jobs:
 
       - name: Pre-install Android system image
         run: sdkmanager --install "system-images;android-31;google_apis;x86_64"
-=======
-        run: |
-          npm install
-          
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
->>>>>>> 0ea522e0f7f1f643c3883c02ce93e1f9903fe819
 
       - name: Run Android Emulator
         uses: ReactiveCircus/android-emulator-runner@v2.32.0
@@ -84,13 +73,9 @@ jobs:
         uses: actions/upload-artifact@v4  
         with:
           name: test-report
-<<<<<<< HEAD
           path: ./reports
 
-=======
-          path: |
-            ./reports
->>>>>>> 0ea522e0f7f1f643c3883c02ce93e1f9903fe819
+
 
 
         
