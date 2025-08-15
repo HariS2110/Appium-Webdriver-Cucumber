@@ -1,32 +1,29 @@
-name: CI
-on: [push, pull_request]
+name: BrowserStack Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  build:
+  wdio-browserstack:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Set up Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
 
-      - name: Install dependencies
-        run: npm install
+    - name: Install dependencies
+      run: npm ci
 
-      - name: Run tests on BrowserStack
-        env:
-          BROWSERSTACK_USER: ${{ secrets.BS_USER }}
-          BROWSERSTACK_KEY: ${{ secrets.BS_KEY }}
-          RUN_ENV: browserstack
-        run: npx wdio run wdio.conf.js
-
-
-      - name: Upload logs if tests fail
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: logs
-          path: logs
+    - name: Run BrowserStack tests
+      env:
+        BROWSERSTACK_USERNAME: ${{ secrets.BS_USER }}
+        BROWSERSTACK_ACCESS_KEY: ${{ secrets.BS_KEY }}
+      run: npm run wdio
