@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI/CD - Android Appium WDIO
 
 on:
   workflow_dispatch:
@@ -23,10 +23,10 @@ on:
           - "no"
 
 jobs:
-  build:
+  android-tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Node.js
@@ -35,10 +35,9 @@ jobs:
           node-version: ${{ github.event.inputs.node-version }}
 
       - name: Install dependencies
-        run: |
-          npm install
+        run: npm install
 
-      - name: Enable KVM
+      - name: Enable KVM (for Android Emulator)
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
@@ -51,15 +50,16 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: Nexus 6
+          emulator-options: -no-snapshot -no-audio -gpu swiftshader_indirect
           script: |
-            echo "Installing App"
+            echo "Installing APK..."
             adb install "app/Demo app.apk"
             adb wait-for-device
             adb shell input keyevent 82
-            echo "Running WDIO + Cucumber Tests"
+            echo "Running WebDriverIO + Cucumber Tests"
             npx wdio run ./wdio.conf.js
 
-      - name: Generate report
+      - name: Generate Mochawesome report
         if: ${{ github.event.inputs.generate-report == 'yes' }}
         run: npm run report
 
@@ -68,5 +68,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-report
-          path: |
-            ./reports
+          path: ./reports
