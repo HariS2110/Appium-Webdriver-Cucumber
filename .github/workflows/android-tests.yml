@@ -1,49 +1,236 @@
-name: Android App Automation CI
+name: CI/CD
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+on:  
+  workflow_dispatch:
+    inputs:
+      node-version:
+        description: 'Choose the Node.js version for the workflow'
+        required: false
+        default: '20'
+        type: choice
+        options:
+          - '16'
+          - '18'
+          - '20'
+          - '21'
+      generate-report:
+        description: 'Choose whether to create and upload the test report'
+        required: false
+        default: 'no'
+        type: choice
+        options:
+          - 'yes'
+          - 'no'
 
 jobs:
   build:
-    runs-on: macos-latest
-    timeout-minutes: 30
-
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
-        with:
-          distribution: temurin
-          java-version: '17'
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: ${{ github.event.inputs.node-version }}
 
-      - name: Install Appium
+      - name: Install dependencies
+        run: npm install
+
+      - name: Enable KVM
         run: |
-          npm install -g appium@2.19.0
-          appium -v
-          appium &>/dev/null &
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Pre-install Android system image
+        run: sdkmanager --install "system-images;android-31;google_apis;x86_64"
 
       - name: Run Android Emulator
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: ReactiveCircus/android-emulator-runner@v2.32.0
         with:
-          api-level: 33
-          target: google_apis  # Use Google APIs instead of default
-          arch: arm64-v8a
+          api-level: 31
+          target: google_apis
+          arch: x86_64
           profile: Nexus 6
+          force-avd-creation: true
+          emulator-options: "-no-snapshot -no-audio -no-boot-anim -gpu swiftshader_indirect"
           script: |
-            echo "Waiting for emulator..."
-            $ANDROID_HOME/platform-tools/adb wait-for-device
-            echo "Emulator devices:"
-            $ANDROID_HOME/platform-tools/adb devices -l
-            echo "Starting tests..."
-            npx wdio run wdio.conf.js
-          emulator-options: -no-window -gpu off -no-snapshot -noaudio -no-boot-anim
-          disable-animations: true
+            echo "Installing App"
+            adb install "app/Demo app.apk"
+            adb shell dumpsys package com.wdiodemoapp | grep -A 1 "MAIN"
+            adb wait-for-device
+            adb shell input keyevent 82
+            echo "Running Tests"
+            npm run test.android
+
+      - name: generate report
+        if: ${{ github.event.inputs.generate-report == 'yes' }}
+        run: npm run report
+
+      - name: upload test report
+        if: ${{ github.event.inputs.generate-report == 'yes' }}
+        uses: actions/upload-artifact@v4  
+        with:
+          name: test-report
+          path: ./reports
+
+
+
+        
+     # avdmanager list device
+            
+      # - name: List AVD devices
+      #   run: |
+      #     echo "Listing AVD devices..."
+      #     sdkmanager --list | grep "system-images"
+      #     avdmanager list device
+
+
+
+
+
+# name: Android Emulator Setup
+
+# on: [push]
+
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+
+#       - name: Set up Java
+#         uses: actions/setup-java@v3
+#         with:
+#           distribution: 'temurin'
+#           java-version: '11'
+
+#       - name: Install Dependencies
+#         run: |
+#           sudo apt-get update
+#           sudo apt-get install -y unzip wget libgl1-mesa-glx libgl1-mesa-dri libpulse0
+
+#       - name: Clean Android SDK
+#         run: |
+#           rm -rf $HOME/android-sdk
+
+#       - name: Install Android SDK
+#         run: |
+#           mkdir -p $HOME/android-sdk/cmdline-tools/latest
+#           wget https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip -O commandlinetools-linux.zip
+#           unzip commandlinetools-linux.zip -d $HOME/android-sdk/cmdline-tools/
+#           mv $HOME/android-sdk/cmdline-tools/cmdline-tools/* $HOME/android-sdk/cmdline-tools/latest/
+#           rm -rf $HOME/android-sdk/cmdline-tools/cmdline-tools
+
+#       - name: Accept Licenses and Update SDK
+#         run: |
+#           yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+#           $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --update
+#           $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-30" "system-images;android-30;default;x86_64" "emulator"
+
+#       - name: Verify SDK Installation
+#         run: |
+#           $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --list
+#           ls -la $HOME/android-sdk/
+#           ls -la $HOME/android-sdk/emulator/ || echo "Emulator directory not found"
+#           ls -la $HOME/android-sdk/cmdline-tools/latest/bin/
+
+#       - name: Create and Start Android Emulator
+#         run: |
+#           echo "Deleting AVD if it exists..."
+#           if $HOME/android-sdk/cmdline-tools/latest/bin/avdmanager list avd | grep -q "testAVD"; then
+#             $HOME/android-sdk/cmdline-tools/latest/bin/avdmanager delete avd -n testAVD || true
+#           fi
+#           echo "Creating AVD..."
+#           echo "no" | $HOME/android-sdk/cmdline-tools/latest/bin/avdmanager create avd --name testAVD --package "system-images;android-30;default;x86_64" --sdcard 100M --force
+#           echo "Listing AVDs..."
+#           $HOME/android-sdk/cmdline-tools/latest/bin/avdmanager list avd
+#           echo "Starting emulator..."
+#           $HOME/android-sdk/emulator/emulator -avd testAVD -no-skin -no-audio -no-boot-anim -no-accel -gpu offscreen -verbose > emulator.log 2>&1 &
+#           tail -f emulator.log
+
+#           echo "Waiting for emulator to start..."
+#           TIMEOUT=300
+#           INTERVAL=10
+#           ELAPSED=0
+#           while [ $ELAPSED -lt $TIMEOUT ]; do
+#             if $HOME/android-sdk/platform-tools/adb shell getprop sys.boot_completed 2>/dev/null | grep -q "1"; then
+#               echo "Emulator is ready."
+#               break
+#             fi
+#             echo "Emulator not ready. Waiting..."
+#             sleep $INTERVAL
+#             ELAPSED=$((ELAPSED + INTERVAL))
+#           done
+#           if [ $ELAPSED -ge $TIMEOUT ]; then
+#             echo "Timeout reached. Emulator may not be ready."
+#             exit 1
+#           fi
+#           echo "Unlocking emulator..."
+#           $HOME/android-sdk/platform-tools/adb shell input keyevent 82
+#           echo "Checking emulator status..."
+#           $HOME/android-sdk/platform-tools/adb devices
+#           $HOME/android-sdk/platform-tools/adb shell getprop sys.boot_completed
+#           echo "Emulator log:"
+#           cat emulator.log
+
+
+
+
+
+
+
+
+
+
+# name: Install Android SDK
+
+# on:
+#   workflow_dispatch
+#   # push:
+#   #   branches:
+#   #     - develop
+#   #     - master
+  
+#   #   paths-ignore:
+#   #         - '.github/workflows/*.yml'
+# jobs:
+#   setup-android-sdk:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+
+#       - name: Set up Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#          node-version: '16'
+        
+#       - name: Install dependencies
+#         run: |
+#           npm install -g appium
+#           npm install
+
+#       - name: Start Appium Server
+#         run: |
+#            appium &
+
+#       - name: Set up Android Emulator
+#         run: |
+#           sudo apt-get update
+#           sudo apt-get install -y wget unzip
+#           wget https://dl.google.com/android/repository/commandlinetools-linux-7583922_latest.zip -O commandlinetools.zip
+#           unzip commandlinetools.zip -d $HOME/android-sdk
+#           yes | $HOME/android-sdk/cmdline-tools/bin/sdkmanager --licenses
+#           $HOME/android-sdk/cmdline-tools/bin/sdkmanager "platforms;android-30" "system-images;android-30;google_apis;x86"
+#           echo no | $HOME/android-sdk/cmdline-tools/bin/avdmanager create avd -n test -k "system-images;android-30;google_apis;x86" --force
+#           emulator -avd test -no-skin -no-audio -no-boot-anim -verbose &
+
+#       - name: run test
+#         run: npm run android.app.cucumber
+        
+      
