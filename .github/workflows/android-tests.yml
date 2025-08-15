@@ -43,12 +43,18 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # Install required system libraries for the emulator
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpulse0 libgl1-mesa-glx
+
       # FIX: Pre-create AVD directory to avoid "Directory nonexistent" error
       - name: Pre-create AVD directory
         run: mkdir -p $HOME/.android/avd/test.avd
 
       - name: Run Android Emulator
-        uses: ReactiveCircus/android-emulator-runner@v2.34.0 # upgraded for bug fixes
+        uses: ReactiveCircus/android-emulator-runner@v2.34.0
         with:
           api-level: 31
           target: google_apis
