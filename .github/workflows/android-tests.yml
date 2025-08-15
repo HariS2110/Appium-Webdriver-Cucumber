@@ -43,13 +43,18 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # FIX: Pre-create AVD directory to avoid "Directory nonexistent" error
+      - name: Pre-create AVD directory
+        run: mkdir -p $HOME/.android/avd/test.avd
+
       - name: Run Android Emulator
-        uses: ReactiveCircus/android-emulator-runner@v2.32.0
+        uses: ReactiveCircus/android-emulator-runner@v2.34.0 # upgraded for bug fixes
         with:
           api-level: 31
           target: google_apis
           arch: x86_64
           profile: Nexus 6
+          avd-name: test
           emulator-options: -no-snapshot -no-audio -gpu swiftshader_indirect
           script: |
             echo "Installing APK..."
