@@ -1,0 +1,54 @@
+name: Android WDIO Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  android-tests:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/android-sdk
+      PATH: $ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Install Android SDK packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y unzip wget lib32stdc++6 lib32z1
+        mkdir -p $ANDROID_HOME/cmdline-tools
+        cd $ANDROID_HOME/cmdline-tools
+        wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O tools.zip
+        unzip tools.zip
+        rm tools.zip
+        yes | $ANDROID_HOME/cmdline-tools/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses
+        $ANDROID_HOME/cmdline-tools/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "system-images;android-33;google_apis;x86_64" "emulator"
+
+    - name: Create Android emulator
+      run: |
+        echo "no" | $ANDROID_HOME/cmdline-tools/bin/avdmanager create avd -n test_emulator -k "system-images;android-33;google_apis;x86_64" --force
+
+    - name: Start emulator
+      run: |
+        $ANDROID_HOME/emulator/emulator -avd test_emulator -no-snapshot -no-audio -no-window &
+        adb wait-for-device
+        adb shell input keyevent 82
+
+    - name: Start Appium server
+      run: npx appium &
+
+    - name: Run WDIO tests
+      run: npx wdio run wdio.conf.js
