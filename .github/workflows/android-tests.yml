@@ -1,40 +1,51 @@
-name: Android WDIO Tests
+name: Android Automation
 
-on: push
+on:
+  push:
+    branches:
+      - main
+  pull_request:
 
 jobs:
-  run-mobile-tests:
-    runs-on: macos-latest
+  android-tests:
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Checkout code
+      # Step 1: Checkout the repo
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Setup Appium
-        run: |
-          npm install -g appium@2.19.0
-          appium -v
-          appium &>/dev/null &
+      # Step 2: Set up Node.js (for Appium & WebDriverIO)
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
 
-      - name: Run tests with emulator
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # Step 4: Cache Node modules (optional)
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # Step 5: Set up Android emulator using ReactiveCircus action
+      - name: Setup Android Emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 30
-          target: google_apis
-          arch: x86_64
+          api-level: 33              # Android API level
+          target: google_apis        # Target
+          arch: x86_64               # Emulator CPU architecture
+          force-avd-creation: true   # Create AVD if not exist
+          emulator-options: "-no-window -no-audio -no-boot-anim" # Headless mode
           script: |
-            echo "=== Emulator Debug Information ==="
-            echo "List of connected devices:"
-            $ANDROID_HOME/platform-tools/adb devices -l
-            echo "Emulator properties:"
-            $ANDROID_HOME/platform-tools/adb shell getprop
-            echo "Starting tests..."
+            # Step 6: Start Appium server (background)
+            npx appium &
+
+            # Step 7: Run your WebDriverIO + Cucumber tests
             npx wdio run wdio.conf.js
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          disable-animations: true
