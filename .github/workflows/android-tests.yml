@@ -1,4 +1,4 @@
-name: Android Automation
+name: Android Automation Tests
 
 on:
   push:
@@ -8,44 +8,35 @@ on:
 
 jobs:
   android-tests:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest   # ✅ macOS runner for hardware-accelerated emulator
+    timeout-minutes: 60
 
     steps:
-      # Step 1: Checkout the repo
+      # Step 1: Checkout code
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      # Step 2: Set up Node.js (for Appium & WebDriverIO)
+      # Step 2: Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20'
 
       # Step 3: Install dependencies
-      - name: Install dependencies
+      - name: Install Node.js dependencies
         run: npm ci
 
-      # Step 4: Cache Node modules (optional)
-      - name: Cache node modules
-        uses: actions/cache@v3
+      # Step 4: Download Android SDK & start emulator
+      - name: Launch Android Emulator
+        uses: ReactiveCircus/android-emulator-runner@v2
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      # Step 5: Set up Android emulator using ReactiveCircus action
-      - name: Setup Android Emulator
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 33              # Android API level
-          target: google_apis        # Target
-          arch: x86_64               # Emulator CPU architecture
-          force-avd-creation: true   # Create AVD if not exist
-          emulator-options: "-no-window -no-audio -no-boot-anim" # Headless mode
+          api-level: 30                     # ✅ Faster boot time than 33
+          target: google_apis               # Can use 'default' for even faster boots
+          arch: x86_64
+          profile: pixel_4
           script: |
-            # Step 6: Start Appium server (background)
-            npx appium &
-
-            # Step 7: Run your WebDriverIO + Cucumber tests
-            npx wdio run wdio.conf.js
+            adb devices
+            adb install ./app-debug.apk      # ✅ Replace with path to your APK
+            npx appium --log-level info &    # ✅ Start Appium in background
+            sleep 10                         # Give Appium time to start
+            npx wdio run wdio.conf.js        # ✅ Run WDIO + Cucumber tests
