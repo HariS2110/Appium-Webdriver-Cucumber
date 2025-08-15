@@ -1,23 +1,32 @@
 name: CI
 on: [push, pull_request]
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-        - name: Checkout
-          uses: actions/checkout@v2
-        - uses: actions/setup-node@v1
-          with:
-            node-version: 16.3.0
-        - name: Install
-          run: npm install
-        - name: Test
-          env:
-            BROWSERSTACK_USER: ${{ secrets.BS_USER }}
-            BROWSERSTACK_KEY: ${{ secrets.BS_KEY }}
-          run: npx wdio run wdio.conf.js
-        - uses: actions/upload-artifact@v1
-          if: failure()
-          with:
-            name: logs
-            path: logs
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests on BrowserStack
+        env:
+          BROWSERSTACK_USER: ${{ secrets.BS_USER }}
+          BROWSERSTACK_KEY: ${{ secrets.BS_KEY }}
+          RUN_ENV: browserstack
+        run: npx wdio run wdio.conf.js
+
+
+      - name: Upload logs if tests fail
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: logs
