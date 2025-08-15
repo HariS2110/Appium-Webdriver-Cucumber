@@ -11,11 +11,14 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       ANDROID_HOME: /usr/local/android-sdk
-      PATH: ${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:$PATH
+      PATH: $ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
 
     steps:
     - name: Checkout repo
       uses: actions/checkout@v3
+
+    - name: Install basic dependencies
+      run: sudo apt-get update && sudo apt-get install -y tar unzip wget
 
     - name: Set up Node.js
       uses: actions/setup-node@v3
@@ -31,22 +34,27 @@ jobs:
         cd $ANDROID_HOME/cmdline-tools
         wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O tools.zip
         unzip tools.zip
+        mv cmdline-tools latest
         rm tools.zip
-        yes | $ANDROID_HOME/cmdline-tools/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses
-        $ANDROID_HOME/cmdline-tools/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "system-images;android-33;google_apis;x86_64" "emulator"
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "system-images;android-33;google_apis;x86_64" "emulator"
 
     - name: Create Android emulator
       run: |
-        echo "no" | $ANDROID_HOME/cmdline-tools/bin/avdmanager create avd -n test_emulator -k "system-images;android-33;google_apis;x86_64" --force
+        echo "no" | $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager create avd -n test_emulator -k "system-images;android-33;google_apis;x86_64" --force
 
     - name: Start emulator
       run: |
         $ANDROID_HOME/emulator/emulator -avd test_emulator -no-snapshot -no-audio -no-window &
-        adb wait-for-device
-        adb shell input keyevent 82
+        $ANDROID_HOME/platform-tools/adb wait-for-device
+        $ANDROID_HOME/platform-tools/adb shell input keyevent 82
+        $ANDROID_HOME/platform-tools/adb devices
 
     - name: Start Appium server
       run: npx appium &
+
+    - name: Wait for Appium
+      run: sleep 10
 
     - name: Run WDIO tests
       run: npx wdio run wdio.conf.js
