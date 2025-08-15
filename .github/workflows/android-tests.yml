@@ -234,8 +234,4 @@ jobs:
 #       - name: run test
 #         run: npm run android.app.cucumber
         
-<<<<<<< HEAD
       
-=======
-      
->>>>>>> 0ea522e0f7f1f643c3883c02ce93e1f9903fe819
