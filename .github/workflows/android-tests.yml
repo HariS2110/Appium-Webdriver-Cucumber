@@ -1,61 +1,52 @@
-name: Android Appium WDIO Tests
+name: Android Emulator CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
+    branches: [ main ]
 
 jobs:
-  android-tests:
+  android-emulator:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-
     env:
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
     steps:
-      # 1️⃣ Checkout your repo
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2️⃣ Setup Node.js
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-
-      # 3️⃣ Install dependencies
-      - name: Install dependencies
-        run: npm ci
-
-      # 4️⃣ Setup Java 17 (required for Android SDK tools)
-      - name: Set up JDK 17
+      - name: Set up JDK 11
         uses: actions/setup-java@v3
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          distribution: temurin
+          java-version: 11
 
-      # 5️⃣ Start Android emulator
-      - name: Run Android Emulator
-        uses: ReactiveCircus/android-emulator-runner@v2
-        with:
-          api-level: 30
-          target: google_apis
-          arch: x86_64
-          force-avd-creation: true
-          emulator-options: -no-window -gpu off
-          disable-animations: true
-          script: echo "Emulator started"
+      - name: Download Android SDK command line tools
+        run: |
+          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+          cd $ANDROID_SDK_ROOT/cmdline-tools
+          curl -o sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+          unzip sdk-tools.zip
+          rm sdk-tools.zip
 
-      # 6️⃣ Wait for emulator to fully boot
-      - name: Wait for Emulator
-        run: adb wait-for-device
+      - name: Install Android SDK packages
+        run: |
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools/bin/sdkmanager --licenses
+          $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools/bin/sdkmanager "platform-tools" "platforms;android-33" "system-images;android-33;google_apis;x86_64" "emulator"
 
-      # 7️⃣ Install your app on emulator
-      - name: Install APK
-        run: adb install -r app/Demo\ app.apk
+      - name: Create and start emulator
+        run: |
+          echo "no" | $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools/bin/avdmanager create avd -n test -k "system-images;android-33;google_apis;x86_64" --device "pixel"
+          $ANDROID_SDK_ROOT/emulator/emulator -avd test -no-window -no-audio -no-snapshot -gpu swiftshader_indirect &
 
-      # 8️⃣ Run WDIO tests
-      - name: Run WDIO Tests
-        run: npx wdio run wdio.conf.js
+      - name: Wait for emulator
+        run: |
+          adb wait-for-device
+          boot_completed=""
+          while [[ "$boot_completed" != "1" ]]; do
+            sleep 5
+            boot_completed=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+            echo "Boot completed: $boot_completed"
+          done
+          adb shell input keyevent 82
