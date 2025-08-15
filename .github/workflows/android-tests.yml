@@ -3,25 +3,36 @@ name: Android WDIO Tests
 on: push
 
 jobs:
-    run-mobile-tests:
-        runs-on: macos-latest
+  run-mobile-tests:
+    runs-on: macos-latest
 
-        steps:
-            - name: pull the project in to the runner
-              uses: actions/checkout@v3
+    steps:
+      - name: Pull the project into the runner
+        uses: actions/checkout@v3
 
-            - name: setup appium
-              run: |
-                npm install -g appium@2.19.0
-                appium -v
-                appium &>/dev/null &
-            
-            - name: Run Android emulator and tests
-              uses: reactivecircus/android-emulator-runner@v2
-              with:
-                api-level: 29
-                script: |
-                  # get the first emulator device name
-                  export ANDROID_DEVICE_NAME=$(adb devices | grep emulator | cut -f1)
-                  echo "Using emulator: $ANDROID_DEVICE_NAME"
-                        npx wdio run wdio.conf.js
+      - name: Setup Appium
+        run: |
+          npm install -g appium@2.19.0
+          appium -v
+          appium &>/dev/null &
+
+      - name: Run Android emulator and tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33          # Use a stable API level
+          arch: arm64-v8a        # Use ARM system image for Apple Silicon
+          script: |
+            # Wait for emulator to fully boot
+            echo "Waiting for emulator to start..."
+            adb wait-for-device
+            until adb shell getprop sys.boot_completed | grep -m 1 1; do
+              echo "Emulator not yet booted, waiting 5s..."
+              sleep 5
+            done
+
+            # Get the dynamically assigned emulator device name
+            export ANDROID_DEVICE_NAME=$(adb devices | grep emulator | cut -f1)
+            echo "Using emulator: $ANDROID_DEVICE_NAME"
+
+            # Run WDIO tests
+            npx wdio run wdio.conf.js
