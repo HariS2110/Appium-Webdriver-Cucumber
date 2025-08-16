@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-
+import { generate } from 'multiple-cucumber-html-reporter';
 dotenv.config({ path: './info.env' });
 
 export const config = {
@@ -45,10 +45,17 @@ export const config = {
       networkLogs: true
     }
   },
+  reporters: [
+    ['cucumberjs-json', {
+        jsonFolder: './reports/json/',
+        language: 'en',
+    }]
+],
   // If you are using Cucumber you need to specify the location of your step definitions.
     cucumberOpts: {
         // <string[]> (file/dir) require files before executing features
         require: ['./features/step-definitions/homepagesteps.js'],
+        format: [],
         // <boolean> show full backtrace for errors
         backtrace: false,
         // <string[]> ("extension:module") require files with the given EXTENSION after requiring MODULE (repeatable)
@@ -72,8 +79,24 @@ export const config = {
         // <boolean> Enable this config to treat undefined definitions as warnings.
         ignoreUndefinedDefinitions: false
     },
+
+    onComplete: function(exitCode, config, capabilities, results) {
+    generate({
+        jsonDir: './reports/json/',
+        reportPath: './reports/html/',
+        displayDuration: true,
+        customData: {
+            title: 'Run info',
+            data: [
+                {label: 'Project', value: 'Random Project'},
+                {label: 'Release', value: '1.0.0'},
+                {label: 'Execution Start Time', value: new Date().toLocaleString()},
+            ]
+        }
+    });
+},
+
+
   maxInstances: 10,
   framework: 'cucumber',
-  
-
 };

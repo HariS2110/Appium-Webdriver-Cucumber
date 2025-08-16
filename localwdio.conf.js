@@ -1,4 +1,5 @@
 import path from 'path';
+import reporter from 'cucumber-html-reporter';
 export const config = {
     //
     // ====================
@@ -134,6 +135,7 @@ export const config = {
     cucumberOpts: {
         // <string[]> (file/dir) require files before executing features
         require: ['./features/step-definitions/homepagesteps.js'],
+        format: ['json:./reports/cucumber_report.json'],
         // <boolean> show full backtrace for errors
         backtrace: false,
         // <string[]> ("extension:module") require files with the given EXTENSION after requiring MODULE (repeatable)
@@ -157,6 +159,24 @@ export const config = {
         // <boolean> Enable this config to treat undefined definitions as warnings.
         ignoreUndefinedDefinitions: false
     },
+
+    onComplete: function(exitCode, config, capabilities, results) {
+    const options = {
+        theme: 'bootstrap',
+        jsonFile: './reports/cucumber_report.json',
+        output: './reports/cucumber_report.html',
+        reportSuiteAsScenarios: true,
+        launchReport: true,
+        metadata: {
+            "App Version":"1.0.0",
+            "Test Environment": "QA",
+            "Platform": "Android",
+            "Executed": "Local"
+        }
+    };
+
+    reporter.generate(options);
+},
 
 
     //
