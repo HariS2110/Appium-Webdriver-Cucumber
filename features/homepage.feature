@@ -6,4 +6,3 @@ Feature: Homepage Tests
     Then I should see the bouncing balls animation screen
 
 
-

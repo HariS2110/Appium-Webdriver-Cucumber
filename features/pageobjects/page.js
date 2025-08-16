@@ -1,5 +1,4 @@
 import { browser } from '@wdio/globals'
-import { getPlatformText } from '../../library/commonfunctions';
 
 /**
 * main page object containing all methods, selectors and functionality
