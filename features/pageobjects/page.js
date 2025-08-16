@@ -1,4 +1,5 @@
 import { browser } from '@wdio/globals'
+import { getPlatformText } from '../../library/commonfunctions';
 
 /**
 * main page object containing all methods, selectors and functionality
@@ -21,5 +22,8 @@ export default class Page {
         await elem.setValue(text);
     } 
 
-    
+    async verifyPanel(panelElement, timeout = 50000) {
+        await panelElement.waitForDisplayed({ timeout });
+    }
+
 }

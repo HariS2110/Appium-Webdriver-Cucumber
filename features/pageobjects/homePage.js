@@ -1,9 +1,6 @@
 import { $ } from '@wdio/globals'
 import Page from './page.js';
 
-/**
- * sub page containing specific selectors and methods for a specific page
- */
 class homePage extends Page {
     
      get animationText () {
@@ -13,6 +10,11 @@ class homePage extends Page {
     get bouncingBallsText () {
         return $('//android.widget.TextView[@content-desc="Bouncing Balls"]');
     }
+
+    get bouncingBallsAnimationText () { 
+        return $('//android.widget.TextView[@text="Animation/Bouncing Balls"]');
+    }
+
 
 }
 
