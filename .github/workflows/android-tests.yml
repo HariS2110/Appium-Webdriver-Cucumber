@@ -58,6 +58,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: reports/html
           destination_dir: wdio
+          keep_files: true
 
       # Print link to the report
       - name: Print report link
